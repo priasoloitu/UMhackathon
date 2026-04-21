@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JadualIQ — Smart Schedule Assistant</title>
+  <meta name="description" content="JadualIQ: AI-powered scheduling assistant. Plan smarter with weather, traffic, and restriction-aware time slots." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/chat.css" />
+  <link rel="stylesheet" href="styles/calendar.css" />
+  <link rel="stylesheet" href="styles/restrictions.css" />
+</head>
+<body>
+
+  <!-- ── Top Navigation ───────────────────────────────────────────────────── -->
+  <header class="topnav" id="topnav">
+    <div class="topnav__brand">
+      <span class="topnav__logo">⚡</span>
+      <span class="topnav__title">JadualIQ</span>
+    </div>
+
+    <div class="topnav__impact" id="impact-strip" style="display:none;">
+    </div>
+
+    <div class="topnav__actions">
+      <div class="week-nav">
+        <button class="icon-btn" id="week-prev" title="Previous week">‹</button>
+        <span class="week-label" id="week-label">This Week</span>
+        <button class="icon-btn" id="week-next" title="Next week">›</button>
+      </div>
+      <button class="icon-btn" id="settings-btn" title="Restrictions & Settings">⚙️</button>
+      <div class="user-badge" id="user-badge">
+        <span id="user-initial">?</span>
+        <div class="user-menu" id="user-menu">
+          <div class="user-menu__name" id="user-menu-name">—</div>
+          <button class="user-menu__btn" id="clear-history-btn">🗑 Clear chat history</button>
+          <button class="user-menu__btn danger" id="logout-btn">↩ Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main Layout ───────────────────────────────────────────────────────── -->
+  <main class="app-layout">
+
+    <!-- LEFT: Chat Sidebar -->
+    <aside class="chat-sidebar" id="chat-sidebar">
+      <div class="chat-sidebar__header">
+        <div class="chat-sidebar__avatar">🤖</div>
+        <div>
+          <div class="chat-sidebar__name">JadualIQ Assistant</div>
+          <div class="chat-sidebar__status" id="chat-status">
+            <span class="status-dot"></span> Online
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chat-messages">
+        <!-- messages rendered by chat.js -->
+      </div>
+
+      <div class="chat-typing" id="chat-typing" style="display:none">
+        <span></span><span></span><span></span>
+      </div>
+
+      <form class="chat-input-row" id="chat-form" autocomplete="off">
+        <input
+          type="text"
+          id="chat-input"
+          class="chat-input"
+          placeholder="Schedule something… (Ctrl+K)"
+          maxlength="500"
+        />
+        <button type="submit" class="chat-send-btn" id="chat-send" title="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </form>
+    </aside>
+
+    <!-- MIDDLE: Calendar -->
+    <section class="calendar-panel" id="calendar-panel">
+      <div class="calendar-container" id="calendar-container">
+        <!-- rendered by calendar.js -->
+      </div>
+    </section>
+
+    <!-- RIGHT: Analytics Sidebar (20%) -->
+    <aside class="impact-sidebar" id="impact-sidebar">
+      <h2 class="impact-sidebar__title">Weekly Impact</h2>
+      
+      <div class="impact-card">
+        <div class="impact-card__icon" style="color: var(--teal)">⏱</div>
+        <div class="impact-card__value" id="impact-hours-val">—</div>
+        <div class="impact-card__label">Hours Saved</div>
+      </div>
+      
+      <div class="impact-card">
+        <div class="impact-card__icon" style="color: var(--green)">✅</div>
+        <div class="impact-card__value" id="impact-tasks-val">—</div>
+        <div class="impact-card__label">Tasks Scheduled</div>
+      </div>
+      
+      <div class="impact-card">
+        <div class="impact-card__icon" style="color: var(--amber)">📅</div>
+        <div class="impact-card__value" id="impact-conflicts-val">—</div>
+        <div class="impact-card__label">Conflicts Managed</div>
+      </div>
+      
+      <div class="impact-card" style="border-color: var(--accent); background: rgba(59, 130, 246, 0.05);">
+        <div class="impact-card__icon" style="color: var(--accent)">💰</div>
+        <div class="impact-card__value" id="impact-rm-val">—</div>
+        <div class="impact-card__label">RM Saved (Transport)</div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ── Restrictions Modal ────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="restrictions-overlay" style="display:none">
+    <div class="modal restrictions-modal">
+      <div class="modal__header">
+        <h2 class="modal__title">⚙️ My Restrictions</h2>
+        <button class="modal__close" id="restrictions-close">✕</button>
+      </div>
+
+      <div class="modal__body">
+        <!-- Day blocks -->
+        <section class="restriction-section">
+          <h3 class="restriction-section__title">Block entire days</h3>
+          <div class="day-block-grid" id="day-block-grid">
+            <label class="day-chip"><input type="checkbox" value="Monday" />Mon</label>
+            <label class="day-chip"><input type="checkbox" value="Tuesday" />Tue</label>
+            <label class="day-chip"><input type="checkbox" value="Wednesday" />Wed</label>
+            <label class="day-chip"><input type="checkbox" value="Thursday" />Thu</label>
+            <label class="day-chip"><input type="checkbox" value="Friday" />Fri</label>
+            <label class="day-chip"><input type="checkbox" value="Saturday" />Sat</label>
+            <label class="day-chip"><input type="checkbox" value="Sunday" />Sun</label>
+          </div>
+        </section>
+
+        <!-- Time blocks -->
+        <section class="restriction-section">
+          <h3 class="restriction-section__title">Block time ranges</h3>
+          <div class="time-block-row">
+            <input type="time" id="time-block-start" class="time-input" />
+            <span class="time-to">to</span>
+            <input type="time" id="time-block-end" class="time-input" />
+            <button class="add-btn" id="add-time-block-btn">+ Add</button>
+          </div>
+        </section>
+
+        <!-- Custom rules -->
+        <section class="restriction-section">
+          <h3 class="restriction-section__title">Custom rules (plain text)</h3>
+          <div class="custom-rule-row">
+            <input type="text" id="custom-rule-input" class="custom-input"
+              placeholder="e.g. I can't drive on Fridays" maxlength="200" />
+            <button class="add-btn" id="add-custom-rule-btn">+ Add</button>
+          </div>
+        </section>
+
+        <!-- Current restrictions list -->
+        <section class="restriction-section">
+          <h3 class="restriction-section__title">Active restrictions</h3>
+          <ul class="restrictions-list" id="restrictions-list">
+            <li class="restrictions-empty">No restrictions set yet.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Task Details Modal ──────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="task-details-overlay" style="display:none">
+    <div class="modal task-details-modal">
+
+      <div class="modal__header">
+        <div class="task-details-header-left">
+          <span class="task-details-status-dot" id="task-details-status-dot"></span>
+          <h2 class="modal__title" id="task-details-title">Task Details</h2>
+        </div>
+        <button class="modal__close" id="task-details-close">✕</button>
+      </div>
+
+      <div class="modal__body">
+
+        <!-- Meta chips -->
+        <div class="task-detail-chips" id="task-details-chips"></div>
+
+        <!-- Rationale -->
+        <div class="task-rationale-section">
+          <div class="task-rationale-section__label">
+            <span>🤖</span> AI Scheduling &amp; Transport Advice
+          </div>
+          <div class="task-rationale-box" id="task-details-rationale">No AI advice recorded.</div>
+        </div>
+
+      </div>
+
+      <div class="modal__footer">
+        <button class="btn btn--danger" id="task-details-delete-btn">🗑 Delete Event</button>
+        <button class="btn btn--secondary" id="task-details-close-btn">Close</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Confirm-Add Modal ─────────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="confirm-overlay" style="display:none">
+    <div class="modal confirm-modal">
+      <div class="modal__header">
+        <h2 class="modal__title">📅 Add to Calendar?</h2>
+        <button class="modal__close" id="confirm-close">✕</button>
+      </div>
+      <div class="modal__body">
+        <div class="confirm-card" id="confirm-card">
+          <!-- populated by chat.js -->
+        </div>
+        <div class="confirm-explanation" id="confirm-explanation"></div>
+        <div class="confirm-alternatives" id="confirm-alternatives"></div>
+      </div>
+      <div class="modal__footer">
+        <button class="btn btn--secondary" id="confirm-reject-btn">✕ Dismiss</button>
+        <button class="btn btn--primary" id="confirm-accept-btn">✅ Add to Calendar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="src/auth.js"></script>
+  <script src="src/impact.js"></script>
+  <script src="src/calendar.js"></script>
+  <script src="src/chat.js"></script>
+  <script src="src/restrictions.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>

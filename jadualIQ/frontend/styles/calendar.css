@@ -1,0 +1,234 @@
+/* ─── Calendar Panel ─────────────────────────────────────────────────────────── */
+.calendar-panel {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-base);
+}
+
+.calendar-container {
+  min-height: calc(100vh - var(--nav-height));
+  padding: 16px;
+}
+
+/* ─── Calendar Grid ──────────────────────────────────────────────────────────── */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 52px repeat(7, 1fr);
+  gap: 0;
+  min-width: 600px;
+  position: relative;
+}
+
+/* Day headers */
+.cal-day-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 6px;
+  gap: 4px;
+}
+.cal-day-header.time-gutter {
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+}
+.cal-day-name {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+}
+.cal-day-date {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  line-height: 1;
+}
+.cal-day-header.today .cal-day-name { color: var(--accent); }
+.cal-day-header.today .cal-day-date {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #5a52e8);
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 2px 12px var(--accent-glow);
+}
+
+/* Time body row area */
+.cal-body {
+  display: contents;
+}
+
+/* Time gutter cell */
+.cal-time-label {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 0 8px;
+  height: 52px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+  border-right: 1px solid var(--border);
+  transform: translateY(-7px);
+  flex-shrink: 0;
+}
+
+/* Day column slot */
+.cal-slot {
+  height: 52px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  border-right: 1px solid var(--border);
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cal-slot:last-child { border-right: none; }
+.cal-slot:hover { background: var(--bg-glass-hover); }
+
+/* Half-hour line */
+.cal-slot::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: rgba(255,255,255,0.015);
+}
+
+/* ─── Task Cards ─────────────────────────────────────────────────────────────── */
+.task-card {
+  position: absolute;
+  left: 3px; right: 3px;
+  border-radius: var(--radius-sm);
+  padding: 4px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 5;
+  transition: all 0.2s;
+  border-left: 3px solid transparent;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.task-card:hover {
+  transform: scale(1.02);
+  z-index: 10;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+}
+
+/* Status colours */
+.task-card--confirmed {
+  background: linear-gradient(135deg, rgba(16,185,129,0.22), rgba(16,185,129,0.12));
+  border-left-color: var(--green);
+  color: #6ef5c9;
+}
+.task-card--warning {
+  background: linear-gradient(135deg, rgba(245,158,11,0.22), rgba(245,158,11,0.12));
+  border-left-color: var(--amber);
+  color: #fcd34d;
+}
+.task-card--blocked {
+  background: linear-gradient(135deg, rgba(239,68,68,0.22), rgba(239,68,68,0.12));
+  border-left-color: var(--red);
+  color: #fca5a5;
+}
+/* Past events — muted blue/grey tint */
+.task-card--past {
+  background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(59,130,246,0.08));
+  border-left-color: #3b82f6;
+  color: #93c5fd;
+  opacity: 0.75;
+}
+.task-card--past::after {
+  content: '✓';
+  position: absolute;
+  top: 3px;
+  right: 22px;
+  font-size: 10px;
+  color: #93c5fd;
+  opacity: 0.8;
+}
+
+.task-card__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 700;
+}
+.task-card__time {
+  font-size: 10px;
+  opacity: 0.8;
+  margin-top: 1px;
+}
+
+.task-card__delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(0,0,0,0.3);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+}
+.task-card:hover .task-card__delete {
+  opacity: 1;
+}
+.task-card__delete:hover {
+  background: var(--red);
+}
+
+/* ─── Empty state ────────────────────────────────────────────────────────────── */
+.calendar-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: var(--text-muted);
+  gap: 10px;
+  font-size: 14px;
+}
+.calendar-empty__icon { font-size: 48px; opacity: 0.4; }
+
+/* ─── Loading shimmer ────────────────────────────────────────────────────────── */
+.shimmer {
+  background: linear-gradient(90deg,
+    rgba(255,255,255,0.04) 25%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .calendar-panel { height: 55vh; }
+  .calendar-grid { min-width: 400px; }
+}

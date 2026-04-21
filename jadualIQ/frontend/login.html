@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>JadualIQ — Login</title>
+  <meta name="description" content="Sign in to JadualIQ, your AI-powered scheduling assistant." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/auth.css" />
+</head>
+<body class="auth-body">
+
+  <div class="auth-bg">
+    <div class="auth-orb auth-orb--1"></div>
+    <div class="auth-orb auth-orb--2"></div>
+    <div class="auth-orb auth-orb--3"></div>
+  </div>
+
+  <div class="auth-container">
+    <!-- Brand -->
+    <div class="auth-brand">
+      <span class="auth-brand__logo">⚡</span>
+      <span class="auth-brand__name">JadualIQ</span>
+    </div>
+    <p class="auth-tagline">AI-Powered Schedule Assistant</p>
+
+    <!-- Tab Toggle -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" data-tab="login">Sign In</button>
+      <button class="auth-tab" id="tab-register" data-tab="register">Create Account</button>
+    </div>
+
+    <!-- Login Form -->
+    <form class="auth-form" id="login-form">
+      <div class="auth-error" id="login-error" style="display:none"></div>
+
+      <div class="form-group">
+        <label class="form-label" for="login-username">Username</label>
+        <input class="form-input" type="text" id="login-username"
+          placeholder="your username" autocomplete="username" required />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="login-password">Password</label>
+        <input class="form-input" type="password" id="login-password"
+          placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+
+      <button type="submit" class="auth-submit-btn" id="login-btn">
+        <span class="btn-text">Sign In</span>
+        <span class="btn-spinner" style="display:none">⏳</span>
+      </button>
+    </form>
+
+    <!-- Register Form -->
+    <form class="auth-form" id="register-form" style="display:none">
+      <div class="auth-error" id="register-error" style="display:none"></div>
+
+      <div class="form-group">
+        <label class="form-label" for="reg-username">Username</label>
+        <input class="form-input" type="text" id="reg-username"
+          placeholder="choose a username" autocomplete="username" required />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="reg-email">Email</label>
+        <input class="form-input" type="email" id="reg-email"
+          placeholder="you@example.com" autocomplete="email" required />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="reg-password">Password</label>
+        <input class="form-input" type="password" id="reg-password"
+          placeholder="min 6 characters" autocomplete="new-password" required />
+      </div>
+
+      <button type="submit" class="auth-submit-btn" id="register-btn">
+        <span class="btn-text">Create Account</span>
+        <span class="btn-spinner" style="display:none">⏳</span>
+      </button>
+    </form>
+
+    <p class="auth-footer">JadualIQ &copy; 2026 · UM Hackathon</p>
+  </div>
+
+  <script src="src/auth.js"></script>
+  <script>
+    // Auth page logic
+    const tabs = document.querySelectorAll('.auth-tab');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+
+    // Redirect if already logged in
+    Auth.me().then(user => {
+      if (user) window.location.href = '/';
+    });
+
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const which = tab.dataset.tab;
+        loginForm.style.display    = which === 'login'    ? '' : 'none';
+        registerForm.style.display = which === 'register' ? '' : 'none';
+      });
+    });
+
+    // Handle URL hash
+    if (window.location.hash === '#register') {
+      document.getElementById('tab-register').click();
+    }
+
+    loginForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const errEl = document.getElementById('login-error');
+      const btn   = document.getElementById('login-btn');
+      errEl.style.display = 'none';
+      btn.querySelector('.btn-text').style.display = 'none';
+      btn.querySelector('.btn-spinner').style.display = '';
+      btn.disabled = true;
+
+      try {
+        await Auth.login(
+          document.getElementById('login-username').value.trim(),
+          document.getElementById('login-password').value
+        );
+        window.location.href = '/';
+      } catch(err) {
+        errEl.textContent = err.message;
+        errEl.style.display = '';
+      } finally {
+        btn.querySelector('.btn-text').style.display = '';
+        btn.querySelector('.btn-spinner').style.display = 'none';
+        btn.disabled = false;
+      }
+    });
+
+    registerForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const errEl = document.getElementById('register-error');
+      const btn   = document.getElementById('register-btn');
+      errEl.style.display = 'none';
+      btn.querySelector('.btn-text').style.display = 'none';
+      btn.querySelector('.btn-spinner').style.display = '';
+      btn.disabled = true;
+
+      try {
+        await Auth.register(
+          document.getElementById('reg-username').value.trim(),
+          document.getElementById('reg-email').value.trim(),
+          document.getElementById('reg-password').value
+        );
+        window.location.href = '/';
+      } catch(err) {
+        errEl.textContent = err.message;
+        errEl.style.display = '';
+      } finally {
+        btn.querySelector('.btn-text').style.display = '';
+        btn.querySelector('.btn-spinner').style.display = 'none';
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
