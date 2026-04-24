@@ -14,8 +14,8 @@ const Chat = (() => {
   const HISTORY_LIMIT = 20; // messages kept for GLM context
 
   let conversationHistory = [];   // [{role, content}, ...]
-  let uiMessages          = [];   // rendered bubbles, saved to localStorage
-  let pendingSuggestion   = null; // the last GLM suggestion awaiting confirm
+  let uiMessages = [];   // rendered bubbles, saved to localStorage
+  let pendingSuggestion = null; // the last GLM suggestion awaiting confirm
 
   // ── Internal helpers ───────────────────────────────────────────────────────
 
@@ -38,9 +38,9 @@ const Chat = (() => {
 
   function _setInputDisabled(disabled) {
     const input = document.getElementById('chat-input');
-    const btn   = document.getElementById('chat-send');
+    const btn = document.getElementById('chat-send');
     if (input) input.disabled = disabled;
-    if (btn)   btn.disabled   = disabled;
+    if (btn) btn.disabled = disabled;
   }
 
   // ── Persistence ────────────────────────────────────────────────────────────
@@ -48,7 +48,7 @@ const Chat = (() => {
   function _saveToStorage() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ uiMessages, conversationHistory }));
-    } catch (_) {}
+    } catch (_) { }
   }
 
   function _loadFromStorage() {
@@ -81,7 +81,7 @@ const Chat = (() => {
     bubble.innerHTML = bubbleHTML;
 
     const time = document.createElement('div');
-    time.className   = 'chat-msg__time';
+    time.className = 'chat-msg__time';
     time.textContent = _now();
 
     msg.appendChild(bubble);
@@ -131,6 +131,61 @@ const Chat = (() => {
     _saveToStorage();
   }
 
+  function appendLocationPrompt(data) {
+    const text = data.message;
+    const html = `
+      <div style="margin-bottom: 8px;">🤔 ${_escHtml(text)}</div>
+      <div class="location-prompt-actions" style="display:flex; gap:6px; margin-bottom: 8px;">
+        <button class="btn btn--primary btn--sm" id="loc-btn-yes" style="flex:1;">Yes</button>
+        <button class="btn btn--outline btn--sm" id="loc-btn-no" style="flex:1;">No</button>
+      </div>
+      <div id="loc-inputs-container" style="display:none; flex-direction:column; gap:6px;">
+        <input type="text" id="loc-input-origin" class="input" placeholder="Enter origin" style="font-size:12px; padding:6px;"/>
+        <input type="text" id="loc-input-dest" class="input" placeholder="Enter destination" style="font-size:12px; padding:6px;"/>
+        <button class="btn btn--primary btn--sm" id="loc-btn-submit">Submit Location</button>
+      </div>
+    `;
+    const el = _createMsgEl('bot', html, 'clarification');
+    _appendToDOM(el);
+
+    uiMessages.push({ role: 'clarification', text });
+    conversationHistory.push({ role: 'assistant', content: text });
+    _saveToStorage();
+
+    const btnYes = el.querySelector('#loc-btn-yes');
+    const btnNo = el.querySelector('#loc-btn-no');
+    const inputsContainer = el.querySelector('#loc-inputs-container');
+    const btnSubmit = el.querySelector('#loc-btn-submit');
+    const inputOrigin = el.querySelector('#loc-input-origin');
+    const inputDest = el.querySelector('#loc-input-dest');
+
+    btnYes.onclick = () => {
+      btnYes.style.display = 'none';
+      btnNo.style.display = 'none';
+      inputsContainer.style.display = 'flex';
+    };
+
+    btnNo.onclick = () => {
+      el.querySelector('.location-prompt-actions').innerHTML = '<span style="color:var(--text-muted);font-size:12px;">Proceeding without location...</span>';
+      send("Proceed without location");
+    };
+
+    btnSubmit.onclick = () => {
+      const orig = inputOrigin.value.trim();
+      const dest = inputDest.value.trim();
+      if (!orig || !dest) {
+        appendWarning("Location / destination invalid.");
+        el.querySelector('.location-prompt-actions').innerHTML = '<span style="color:var(--text-muted);font-size:12px;">Invalid location, proceeding without it...</span>';
+        inputsContainer.style.display = 'none';
+        send("Proceed without location");
+      } else {
+        inputsContainer.style.display = 'none';
+        el.querySelector('.location-prompt-actions').innerHTML = '<span style="color:var(--text-muted);font-size:12px;">Location saved.</span>';
+        send(`Origin: ${orig}, Destination: ${dest}`);
+      }
+    };
+  }
+
   function appendSuggestion(result) {
     const { parsed, explanation } = _extractParsed(result);
     if (!parsed) {
@@ -139,6 +194,13 @@ const Chat = (() => {
     }
 
     const s = parsed.suggestion;
+
+    // Guard: if AI returned no suggestion object, fall back to plain text
+    if (!s || typeof s !== 'object') {
+      appendBotMessage(explanation || parsed.explanation || result.glm_raw || 'The AI responded but did not produce a schedule suggestion. Please try again.');
+      return;
+    }
+
     const weatherIcon = result.weather?.suitable_outdoor ? '☀️' : '🌧️';
     const trafficIcon = result.traffic?.peak_hour_warning ? '🚦' : '🟢';
 
@@ -147,10 +209,10 @@ const Chat = (() => {
         <span class="suggestion-badge">📅 Suggestion</span>
         ${weatherIcon} ${trafficIcon}
       </div>
-      <div class="suggestion-title">${_escHtml(s.title)}</div>
+      <div class="suggestion-title">${_escHtml(s.title || 'Untitled Task')}</div>
       <div class="suggestion-meta">
-        <span>📅 ${s.date}</span>
-        <span>🕐 ${s.start_time}${s.end_time ? ' – ' + s.end_time : ''}</span>
+        <span>📅 ${s.date || '—'}</span>
+        <span>🕐 ${s.start_time || '—'}${s.end_time ? ' – ' + s.end_time : ''}</span>
         ${s.location ? `<span>📍 ${_escHtml(s.location)}</span>` : ''}
       </div>
       <div class="suggestion-explanation">${_escHtml(explanation)}</div>
@@ -197,7 +259,7 @@ const Chat = (() => {
 
       // Re-render calendar
       if (typeof Calendar !== 'undefined') await Calendar.refresh();
-      if (typeof Impact   !== 'undefined') await Impact.refresh();
+      if (typeof Impact !== 'undefined') await Impact.refresh();
 
     } catch (err) {
       el.querySelector('.suggestion-actions').innerHTML =
@@ -221,27 +283,31 @@ const Chat = (() => {
       return;
     }
 
-    uiMessages          = saved.uiMessages;
+    uiMessages = saved.uiMessages;
     conversationHistory = (saved.conversationHistory || []).slice(-HISTORY_LIMIT * 2);
 
     // Re-render plain messages (skip suggestion bubbles — they'd need re-wiring)
     saved.uiMessages.forEach(m => {
-      if (m.role === 'user')          { const el = _createMsgEl('user', _escHtml(m.text)); _appendToDOM(el); }
-      if (m.role === 'bot')           { const el = _createMsgEl('bot', _escHtml(m.text).replace(/\n/g,'<br/>')); _appendToDOM(el); }
-      if (m.role === 'warning')       { const el = _createMsgEl('bot', `<div class="chat-msg__icon">⚠️</div>${_escHtml(m.text).replace(/\n/g,'<br/>')}`, 'warning'); _appendToDOM(el); }
+      if (m.role === 'user') { const el = _createMsgEl('user', _escHtml(m.text)); _appendToDOM(el); }
+      if (m.role === 'bot') { const el = _createMsgEl('bot', _escHtml(m.text).replace(/\n/g, '<br/>')); _appendToDOM(el); }
+      if (m.role === 'warning') { const el = _createMsgEl('bot', `<div class="chat-msg__icon">⚠️</div>${_escHtml(m.text).replace(/\n/g, '<br/>')}`, 'warning'); _appendToDOM(el); }
       if (m.role === 'clarification') { const el = _createMsgEl('bot', `🤔 ${_escHtml(m.text)}`, 'clarification'); _appendToDOM(el); }
-      if (m.role === 'suggestion')    {
+      if (m.role === 'suggestion') {
         try {
           const s = JSON.parse(m.text);
           const el = _createMsgEl('bot',
             `<div style="color:var(--text-muted);font-size:12px;">📅 Previous suggestion: <b>${_escHtml(s.title)}</b> on ${s.date} at ${s.start_time} (already handled)</div>`
           );
           _appendToDOM(el);
-        } catch(_) {}
+        } catch (_) { }
       }
     });
 
-    if (uiMessages.length > 0) {
+    // Only show welcome-back if the last stored message was NOT already this greeting
+    const lastMsg = uiMessages[uiMessages.length - 1];
+    const isAlreadyWelcome = lastMsg && lastMsg.role === 'bot' &&
+      lastMsg.text && lastMsg.text.includes('Welcome back');
+    if (!isAlreadyWelcome) {
       appendBotMessage('Welcome back! 👋 I remember our last conversation. How can I help you schedule today?');
     }
   }
@@ -265,15 +331,20 @@ const Chat = (() => {
     _setTyping(true);
 
     try {
+      const controller = new AbortController();
+      const fetchTimeout = setTimeout(() => controller.abort(), 90000); // 90s max
+
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: controller.signal,
         body: JSON.stringify({
           message,
           history: conversationHistory.slice(-HISTORY_LIMIT * 2),
         }),
       });
+      clearTimeout(fetchTimeout);
 
       const data = await res.json();
       _setTyping(false);
@@ -286,6 +357,8 @@ const Chat = (() => {
       // Route by response type
       if (data.type === 'warning') {
         appendWarning(data.message);
+      } else if (data.type === 'location_prompt') {
+        appendLocationPrompt(data);
       } else if (data.type === 'clarification') {
         appendClarification(data.message);
       } else if (data.type === 'suggestion') {
@@ -296,7 +369,11 @@ const Chat = (() => {
 
     } catch (err) {
       _setTyping(false);
-      appendWarning('Network error — please check your connection.');
+      if (err.name === 'AbortError') {
+        appendWarning('⏳ The AI is taking too long to respond. Please try again in a moment.');
+      } else {
+        appendWarning('Network error — please check your connection.');
+      }
     } finally {
       _setInputDisabled(false);
       document.getElementById('chat-input')?.focus();
@@ -325,7 +402,7 @@ const Chat = (() => {
 
   function _extractParsed(result) {
     if (!result.parsed) return { parsed: null, explanation: '' };
-    const parsed      = result.parsed;
+    const parsed = result.parsed;
     const explanation = parsed.explanation || '';
     return { parsed, explanation };
   }
@@ -336,7 +413,7 @@ const Chat = (() => {
     _restoreMessages();
 
     // Form submit
-    const form  = document.getElementById('chat-form');
+    const form = document.getElementById('chat-form');
     const input = document.getElementById('chat-input');
 
     form?.addEventListener('submit', e => {

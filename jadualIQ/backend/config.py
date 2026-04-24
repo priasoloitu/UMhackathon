@@ -4,10 +4,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ─── Z.AI / GLM Settings ────────────────────────────────────────────────────
-ZAI_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
+ZAI_BASE_URL = os.getenv("ZAI_BASE_URL", "https://open.bigmodel.cn/api/paas/v4").strip('"').strip()
 ZAI_MODEL    = os.getenv("ZAI_MODEL", "glm-4-flash")
 ZAI_API_KEY  = os.getenv("ZAI_API_KEY", "")
-
+print(f"[DEBUG] API Key loaded: {'YES' if ZAI_API_KEY else 'NO — KEY IS MISSING'}")
 # ─── Database ────────────────────────────────────────────────────────────────
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
 DB_PATH   = os.path.join(BASE_DIR, "jadualiq.db")

@@ -1,6 +1,5 @@
 """Chat route — guardrail → orchestrator → GLM → response."""
 from flask import Blueprint, request, jsonify, session
-from agents import guardrail
 from agents import orchestrator
 
 chat_bp = Blueprint("chat", __name__, url_prefix="/api")
@@ -25,11 +24,6 @@ def chat():
 
     if not message:
         return jsonify({"error": "message is required"}), 400
-
-    # ── Guardrail ─────────────────────────────────────────────────────────────
-    warning = guardrail.check(message, history)
-    if warning:
-        return jsonify(warning)
 
     # ── Orchestrator pipeline ─────────────────────────────────────────────────
     result = orchestrator.run(

@@ -52,7 +52,9 @@ def check(message: str, history: list = None) -> dict | None:
             return None
         if last_msg.get("role") == "assistant" and "What time do you prefer?" in last_msg.get("content", ""):
             return None
+        if last_msg.get("role") == "assistant" and "put your location and destination" in last_msg.get("content", ""):
+            return None
 
-    if is_scheduling_related(message):
+    if is_scheduling_related(message) or "proceed without location" in message.lower() or "origin:" in message.lower():
         return None  # pass through
     return WARNING_RESPONSE

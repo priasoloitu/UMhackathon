@@ -61,10 +61,25 @@ def _fetch_owm(date: str, location: str) -> dict:
 
 
 def _simulated(date: str, location: str) -> dict:
+    import hashlib
+    # Use deterministic hash of the date string so same date = same weather
+    h = int(hashlib.md5(date.encode('utf-8')).hexdigest(), 16)
+    
+    conditions = [
+        ("Sunny", 34, 0.05),
+        ("Partly cloudy", 31, 0.15),
+        ("Overcast", 29, 0.30),
+        ("Light rain", 27, 0.60),
+        ("Heavy rain", 26, 0.90)
+    ]
+    
+    idx = h % len(conditions)
+    desc, temp, rain_prob = conditions[idx]
+    
     return {
-        "summary": f"Partly cloudy in {location} on {date}. Low rain chance (15%).",
-        "suitable_outdoor": True,
-        "temperature_c": 31,
-        "rain_probability": 0.15,
+        "summary": f"{desc} in {location} on {date}. Rain chance {int(rain_prob*100)}%.",
+        "suitable_outdoor": rain_prob < 0.5,
+        "temperature_c": temp,
+        "rain_probability": rain_prob,
         "source": "simulated",
     }

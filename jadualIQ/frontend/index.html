@@ -1,18 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JadualIQ — Smart Schedule Assistant</title>
-  <meta name="description" content="JadualIQ: AI-powered scheduling assistant. Plan smarter with weather, traffic, and restriction-aware time slots." />
+  <meta name="description"
+    content="JadualIQ: AI-powered scheduling assistant. Plan smarter with weather, traffic, and restriction-aware time slots." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
   <link rel="stylesheet" href="styles/main.css" />
   <link rel="stylesheet" href="styles/chat.css" />
   <link rel="stylesheet" href="styles/calendar.css" />
   <link rel="stylesheet" href="styles/restrictions.css" />
 </head>
+
 <body>
 
   <!-- ── Top Navigation ───────────────────────────────────────────────────── -->
@@ -28,6 +32,7 @@
     <div class="topnav__actions">
       <div class="week-nav">
         <button class="icon-btn" id="week-prev" title="Previous week">‹</button>
+        <button class="week-today-btn" id="week-today" title="Jump to current week">Today</button>
         <span class="week-label" id="week-label">This Week</span>
         <button class="icon-btn" id="week-next" title="Next week">›</button>
       </div>
@@ -67,17 +72,12 @@
       </div>
 
       <form class="chat-input-row" id="chat-form" autocomplete="off">
-        <input
-          type="text"
-          id="chat-input"
-          class="chat-input"
-          placeholder="Schedule something… (Ctrl+K)"
-          maxlength="500"
-        />
+        <input type="text" id="chat-input" class="chat-input" placeholder="Schedule something… (Ctrl+K)"
+          maxlength="500" />
         <button type="submit" class="chat-send-btn" id="chat-send" title="Send">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="22" y1="2" x2="11" y2="13"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>
         </button>
       </form>
@@ -93,29 +93,39 @@
     <!-- RIGHT: Analytics Sidebar (20%) -->
     <aside class="impact-sidebar" id="impact-sidebar">
       <h2 class="impact-sidebar__title">Weekly Impact</h2>
-      
+
       <div class="impact-card">
         <div class="impact-card__icon" style="color: var(--teal)">⏱</div>
         <div class="impact-card__value" id="impact-hours-val">—</div>
         <div class="impact-card__label">Hours Saved</div>
       </div>
-      
+
       <div class="impact-card">
         <div class="impact-card__icon" style="color: var(--green)">✅</div>
         <div class="impact-card__value" id="impact-tasks-val">—</div>
         <div class="impact-card__label">Tasks Scheduled</div>
       </div>
-      
+
       <div class="impact-card">
         <div class="impact-card__icon" style="color: var(--amber)">📅</div>
         <div class="impact-card__value" id="impact-conflicts-val">—</div>
         <div class="impact-card__label">Conflicts Managed</div>
       </div>
-      
+
       <div class="impact-card" style="border-color: var(--accent); background: rgba(59, 130, 246, 0.05);">
         <div class="impact-card__icon" style="color: var(--accent)">💰</div>
         <div class="impact-card__value" id="impact-rm-val">—</div>
         <div class="impact-card__label">RM Saved (Transport)</div>
+      </div>
+
+      <!-- Upcoming Schedule List -->
+      <div class="schedule-list-section">
+        <div class="schedule-list__header">
+          <span class="schedule-list__title">📋 Upcoming Schedule</span>
+        </div>
+        <div class="schedule-list" id="schedule-list">
+          <div class="schedule-list__empty">No upcoming events</div>
+        </div>
       </div>
     </aside>
 
@@ -159,8 +169,8 @@
         <section class="restriction-section">
           <h3 class="restriction-section__title">Custom rules (plain text)</h3>
           <div class="custom-rule-row">
-            <input type="text" id="custom-rule-input" class="custom-input"
-              placeholder="e.g. I can't drive on Fridays" maxlength="200" />
+            <input type="text" id="custom-rule-input" class="custom-input" placeholder="e.g. I can't drive on Fridays"
+              maxlength="200" />
             <button class="add-btn" id="add-custom-rule-btn">+ Add</button>
           </div>
         </section>
@@ -193,12 +203,29 @@
         <!-- Meta chips -->
         <div class="task-detail-chips" id="task-details-chips"></div>
 
+        <!-- Forecast warning (shown only for events > 7 days away) -->
+        <div id="task-forecast-warning" style="display:none;"></div>
+
         <!-- Rationale -->
         <div class="task-rationale-section">
           <div class="task-rationale-section__label">
             <span>🤖</span> AI Scheduling &amp; Transport Advice
           </div>
           <div class="task-rationale-box" id="task-details-rationale">No AI advice recorded.</div>
+        </div>
+
+        <!-- Personal Notes -->
+        <div class="task-rationale-section" style="margin-top: 16px;">
+          <div class="task-rationale-section__label" style="background: rgba(16, 185, 129, 0.1); color: var(--green);">
+            <span>📝</span> Personal Notes
+          </div>
+          <div class="task-rationale-box" id="task-personal-notes-display">No personal notes yet.</div>
+          <textarea id="task-personal-notes-edit" class="task-rationale-box" style="display:none; width: 100%; min-height: 80px; resize: vertical; border: 1px solid var(--border); box-sizing: border-box;" placeholder="Add your personal notes here..."></textarea>
+          <div style="margin-top: 8px; text-align: right;">
+            <button class="btn btn--secondary" id="task-notes-edit-btn" style="padding: 4px 10px; font-size: 12px;">Edit Notes</button>
+            <button class="btn btn--secondary" id="task-notes-cancel-btn" style="display:none; padding: 4px 10px; font-size: 12px; margin-right: 4px;">Cancel</button>
+            <button class="btn btn--primary" id="task-notes-save-btn" style="display:none; padding: 4px 10px; font-size: 12px;">Save Notes</button>
+          </div>
         </div>
 
       </div>
@@ -232,6 +259,68 @@
     </div>
   </div>
 
+  <!-- ── Conflict Resolution Modal ─────────────────────────────────────────── -->
+  <div class="modal-overlay" id="conflict-modal-overlay" style="display:none">
+    <div class="modal conflict-modal" style="width: 580px;">
+      <div class="modal__header">
+        <h2 class="modal__title" style="color: var(--red)">⚠️ Schedule Conflict</h2>
+        <button class="modal__close" id="conflict-close">✕</button>
+      </div>
+      <div class="modal__body">
+
+        <div class="conflict-comparison">
+          <!-- KEEP TASK -->
+          <div class="conflict-side conflict-side--keep">
+            <div class="conflict-side__label">KEEP</div>
+            <div class="conflict-task-card">
+              <div class="conflict-task-title" id="conflict-keep-title">—</div>
+              <div class="conflict-task-time" id="conflict-keep-time">—</div>
+            </div>
+          </div>
+
+          <div class="conflict-vs">vs</div>
+
+          <!-- MOVE TASK -->
+          <div class="conflict-side conflict-side--move">
+            <div class="conflict-side__label">SUGGESTED MOVE</div>
+            <div class="conflict-task-card conflict-task-card--moved">
+              <div class="conflict-task-title" id="conflict-move-title">—</div>
+              <div class="conflict-task-time" style="text-decoration: line-through; opacity: 0.6;"
+                id="conflict-move-old-time">—</div>
+              <div class="conflict-task-time conflict-task-time--new" id="conflict-move-new-time">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="task-rationale-section" style="margin-top: 16px;">
+          <div class="task-rationale-section__label" style="background: rgba(245, 158, 11, 0.1); color: var(--amber);">
+            <span>🤖</span> AI Resolution Advice
+          </div>
+          <div class="task-rationale-box" id="conflict-rationale">—</div>
+        </div>
+
+        <div id="conflict-alternatives-container" style="display:none; margin-top: 16px;">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">OTHER OPTIONS:
+          </div>
+          <div class="confirm-alternatives" id="conflict-alternatives-list"></div>
+        </div>
+
+      </div>
+      <div class="modal__footer" style="justify-content: space-between;">
+        <div>
+          <button class="btn btn--secondary" id="conflict-manual-btn" style="padding: 8px 14px; font-size: 13px;">✏️
+            Reschedule Manually</button>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn--secondary" id="conflict-alts-btn" style="padding: 8px 14px; font-size: 13px;">See
+            Alternatives</button>
+          <button class="btn btn--primary" id="conflict-accept-btn"
+            style="padding: 8px 14px; font-size: 13px; background: var(--green);">✅ Accept & Move</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="src/auth.js"></script>
   <script src="src/impact.js"></script>
   <script src="src/calendar.js"></script>
@@ -239,4 +328,5 @@
   <script src="src/restrictions.js"></script>
   <script src="src/main.js"></script>
 </body>
+
 </html>
