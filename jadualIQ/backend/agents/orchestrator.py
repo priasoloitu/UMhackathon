@@ -683,56 +683,66 @@ IMPORTANT: If the user asks anything unrelated to scheduling, reply ONLY with:
 {{"error": "I can only help you schedule your activities."}}"""
 
 
-def call_glm(messages: list, system_prompt: str, intent: dict = None, weather_data: dict = None, traffic_data: dict = None) -> str:
-    """Call Z.AI GLM and return the response text. Falls back to mock on any error."""
+def call_glm(messages: list, system_prompt: str, intent: dict = None, weather_data: dict = None, traffic_data: dict = None, constraint_result: dict = None, calendar_conflicts: list = None) -> str:
+    """Send history and prompt to Z.AI. Falls back to mock on failure."""
+    
+    # ── Call Z.AI ──────────────────────────────────────────────
     if not ZAI_API_KEY:
-        return _mock_glm_response(messages, intent, weather_data, traffic_data)
+        print("[call_glm] No API key set — using mock response")
+        return _mock_glm_response(messages, intent, weather_data, traffic_data, constraint_result, calendar_conflicts)
+
+    headers = {
+        "Authorization": f"Bearer {ZAI_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    # Prepare messages payload
+    api_messages = [{"role": "system", "content": system_prompt}]
+    
+    # Limit history to prevent token explosion
+    MAX_HISTORY = 3
+    recent_history = messages[-MAX_HISTORY:] if len(messages) > MAX_HISTORY else messages
+    
+    for msg in recent_history:
+        api_messages.append({
+            "role": msg.get("role", "user"),
+            "content": msg.get("content", "")
+        })
+
+    payload = {
+        "model": ZAI_MODEL,
+        "messages": api_messages,
+        "temperature": 0.2,
+        "max_tokens": 512
+    }
 
     try:
-        headers = {
-            "Authorization": f"Bearer {ZAI_API_KEY}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": ZAI_MODEL,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                *messages,
-            ],
-            "temperature": 0.3,
-            "max_tokens": 512,
-        }
-        resp = None
-        for attempt, timeout in enumerate([15, 25], start=1):
-            try:
-                resp = requests.post(
-                    f"{ZAI_BASE_URL}/chat/completions",
-                    headers=headers,
-                    json=payload,
-                    timeout=timeout,
-                )
-                break  # success
-            except requests.exceptions.Timeout:
-                if attempt == 2:
-                    print("[call_glm] Both attempts timed out — falling back to mock")
-                    return _mock_glm_response(messages, intent, weather_data, traffic_data)
-                print(f"[call_glm] Attempt {attempt} timed out, retrying with longer timeout...")
+        resp = requests.post(
+            f"{ZAI_BASE_URL}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=15  # Fail fast to prevent locking up the UI
+        )
         resp.raise_for_status()
         resp_json = resp.json()
+        
+        # Ensure we have choices and content
         if not resp_json.get("choices") or not resp_json["choices"][0].get("message"):
-            raise ValueError("Empty or invalid GLM API response")
-        raw = resp_json["choices"][0]["message"].get("content") or ""
+            print("[call_glm] Z.AI returned malformed JSON structure — falling back to mock")
+            return _mock_glm_response(messages, intent, weather_data, traffic_data, constraint_result, calendar_conflicts)
+            
+        raw = resp_json["choices"][0]["message"].get("content", "")
         if not raw.strip():
             print("[call_glm] Z.AI returned empty content body — falling back to mock")
-            return _mock_glm_response(messages, intent, weather_data, traffic_data)
+            return _mock_glm_response(messages, intent, weather_data, traffic_data, constraint_result, calendar_conflicts)
         return raw
     except Exception as e:
         # API unreachable, quota exceeded, bad response — fall back to mock
         print(f"[orchestrator] Z.AI API error: {e} — falling back to mock response")
-        return _mock_glm_response(messages, intent, weather_data, traffic_data)
+        return _mock_glm_response(messages, intent, weather_data, traffic_data, constraint_result, calendar_conflicts)
 
 
-def _mock_glm_response(messages: list, intent: dict = None, weather_data: dict = None, traffic_data: dict = None) -> str:
+def _mock_glm_response(messages: list, intent: dict = None, weather_data: dict = None, traffic_data: dict = None, constraint_result: dict = None, calendar_conflicts: list = None) -> str:
     """Return a mock GLM response when no API key is set (for development)."""
     import json
     today = datetime.now()
@@ -1072,7 +1082,7 @@ def _run_pipeline(user_id: int, message: str, history: list) -> dict:
     # 5. Constraint check
     constraint_result = check_constraints(user_id, intent)
 
-    # 7. Build system prompt
+    # 6. Build system prompt
     custom_rules = constraint_result.get("custom_rules", [])
     custom_section = ""
     if custom_rules:
@@ -1102,14 +1112,13 @@ def _run_pipeline(user_id: int, message: str, history: list) -> dict:
         custom_rules_section = _safe(custom_section),
     )
 
-    # 8. Build message history for GLM
+    # 7. Build message history for GLM
     glm_messages = history + [{"role": "user", "content": message}]
 
-    # 9. Call GLM
-    raw = call_glm(glm_messages, system_prompt, intent, weather_data, traffic_data)
+    # 8. Call GLM
+    raw = call_glm(glm_messages, system_prompt, intent, weather_data, traffic_data, constraint_result, existing_conflicts)
 
-    # 10. Parse GLM response
-    import json
+    # 9. Parse GLM response
     parsed = {"explanation": "I'm sorry, I couldn't process that properly.", "suggestion": None, "alternatives": []}
     if raw:
         try:
@@ -1124,7 +1133,6 @@ def _run_pipeline(user_id: int, message: str, history: list) -> dict:
         "traffic":           traffic_data,
         "constraints":       constraint_result,
         "priority":          priority,
-        "glm_raw":           raw,
         "parsed":            parsed,
         "calendar_conflicts": existing_conflicts,   # list of conflicting tasks
     }

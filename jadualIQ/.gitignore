@@ -72,3 +72,6 @@ htmlcov/
 
 # ── Jupyter ───────────────────────────────────────────────────────────────────
 .ipynb_checkpoints/
+
+# ── Dev/debug scripts (not part of the submission) ────────────────────────────
+backend/test_*.py
