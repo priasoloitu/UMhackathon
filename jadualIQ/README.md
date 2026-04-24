@@ -23,7 +23,7 @@
 | Frontend | Vanilla HTML, CSS, JavaScript |
 | Backend | Python 3.11, Flask 3.0 |
 | Database | SQLite3 (3NF normalized) |
-| AI Model | Z.AI GLM-4-Flash |
+| AI Model | Z.AI ilmu-glm-5.1 |
 | Weather API | OpenWeatherMap (free tier) |
 | Traffic API | Google Maps Distance Matrix |
 
