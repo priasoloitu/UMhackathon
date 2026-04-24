@@ -214,16 +214,25 @@ def delete_task(task_id: int, user_id: int) -> bool:
     conn = get_db()
     # Fetch the task first so we can reverse its impact
     row = conn.execute(
-        "SELECT savings_rm FROM tasks WHERE id = ? AND user_id = ?",
+        "SELECT start_time, end_time, savings_rm FROM tasks WHERE id = ? AND user_id = ?",
         (task_id, user_id)
     ).fetchone()
 
     c = conn.execute("DELETE FROM tasks WHERE id = ? AND user_id = ?", (task_id, user_id))
     if c.rowcount > 0 and row:
         # Reverse time saved
+        try:
+            st = row["start_time"] or "09:00"
+            et = row["end_time"] or "10:00"
+            sh, sm = map(int, st.split(':'))
+            eh, em = map(int, et.split(':'))
+            duration_mins = max(30, (eh * 60 + em) - (sh * 60 + sm))
+        except Exception:
+            duration_mins = 30
+
         conn.execute(
             "INSERT INTO impact_log (user_id, event_type, value) VALUES (?, 'time_saved_minutes', ?)",
-            (user_id, -30)
+            (user_id, -duration_mins)
         )
         # Reverse money saved
         savings = float(row["savings_rm"] or 0)
@@ -340,10 +349,12 @@ def get_impact(user_id: int) -> dict:
         (user_id,)
     ).fetchone()["total"]
 
-    # Conflicts this week (tasks with status='warning' or 'blocked', within last 7 days)
+    # Conflicts this week (tasks with status='blocked', within last 7 days)
+    # Note: We omit 'warning' here because 'warning' is used for weather/traffic alerts, 
+    # and we don't want them artificially inflating the scheduling conflicts counter.
     conflicts = conn.execute(
         """SELECT COUNT(*) as cnt FROM tasks
-           WHERE user_id = ? AND status IN ('warning','blocked')
+           WHERE user_id = ? AND status = 'blocked'
            AND date >= date('now', '-7 days')""",
         (user_id,)
     ).fetchone()["cnt"]
