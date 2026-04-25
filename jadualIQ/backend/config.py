@@ -10,7 +10,10 @@ ZAI_API_KEY  = os.getenv("ZAI_API_KEY", "")
 
 # ─── Database ────────────────────────────────────────────────────────────────
 BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
-DB_PATH   = os.path.join(BASE_DIR, "jadualiq.db")
+if not os.access(BASE_DIR, os.W_OK):
+    DB_PATH = "/tmp/jadualiq.db"
+else:
+    DB_PATH = os.path.join(BASE_DIR, "jadualiq.db")
 
 # ─── Weather (OpenWeatherMap free tier) ──────────────────────────────────────
 OWM_API_KEY      = os.getenv("OWM_API_KEY", "")
