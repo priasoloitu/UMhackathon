@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "jadualIQ/backend/app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "jadualIQ/backend/app.py"
+    }
+  ]
+}
