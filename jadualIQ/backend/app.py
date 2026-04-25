@@ -58,7 +58,13 @@ def create_app():
     return app
 
 
-if __name__ == "__main__":
+# Initialize DB and create app globally for WSGI servers (like Vercel/Render/Gunicorn)
+try:
     init_db()
-    app = create_app()
+except Exception as e:
+    print(f"Warning: DB init failed (might be read-only environment): {e}")
+    
+app = create_app()
+
+if __name__ == "__main__":
     app.run(debug=DEBUG, port=5000)
