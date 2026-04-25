@@ -7,7 +7,9 @@ def get_db():
     """Return a connection to the SQLite database."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
+    # VERCEL HACK: Disable foreign keys because /tmp database is ephemeral 
+    # and the users table might be empty on a new serverless instance
+    conn.execute("PRAGMA foreign_keys = OFF")
     return conn
 
 
