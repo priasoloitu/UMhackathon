@@ -38,7 +38,7 @@ def create_task():
         user_id, data["date"], data["start_time"], end_time
     )
 
-    task = add_task(user_id, data)
+    task = add_task(user_id, data, conflict_detected=len(conflicts) > 0)
     return jsonify({
         **task,
         "conflict_warning": len(conflicts) > 0,

@@ -135,7 +135,56 @@ const Calendar = (() => {
         slot.dataset.date = dateStr;
         slot.dataset.time = timeStr;
 
-        slot.addEventListener('click', () => {
+        slot.addEventListener('click', async () => {
+          // Pick mode: user is manually rescheduling a conflict
+          if (_pickMode) {
+            // Check if the selected slot is in the past
+            const now = new Date();
+            const selectedDateTime = new Date(`${dateStr}T${timeStr}`);
+            if (selectedDateTime < now) {
+              alert("You cannot schedule a task in the past. Please pick a future time slot.");
+              return;
+            }
+
+            const task = _pickMode.task;
+            const duration = task.end_time
+              ? timeToMinutes(task.end_time) - timeToMinutes(task.start_time)
+              : 60;
+            const endMins = h * 60 + duration;
+            const endHour = Math.min(Math.floor(endMins / 60), 23);
+            const endMin = endMins % 60;
+            const newEnd = `${String(endHour).padStart(2,'0')}:${String(endMin).padStart(2,'0')}`;
+
+            try {
+              const res = await fetch(`/api/schedule/${task.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  title: task.title,
+                  date: dateStr,
+                  start_time: timeStr,
+                  end_time: newEnd,
+                  location: task.location || '',
+                  status: 'confirmed',
+                  notes: task.notes || '',
+                  personal_notes: task.personal_notes || ''
+                })
+              });
+              if (res.ok) {
+                _exitPickMode();
+                await refresh();
+                if (typeof Impact !== 'undefined') Impact.refresh();
+              } else {
+                alert('Failed to reschedule. Please try again.');
+              }
+            } catch {
+              alert('Network error while rescheduling.');
+            }
+            return; // Don't fall through to chat prefill
+          }
+
+          // Normal mode: prefill chat
           if (typeof Chat !== 'undefined') {
             const dayName = d.toLocaleDateString('en-MY', { weekday: 'long' });
             Chat.prefill(`Schedule something on ${dayName}, ${fmt(d)} at ${formatTimeLabel(h)}`);
@@ -528,6 +577,42 @@ const Calendar = (() => {
   // ── Conflict Resolution Modal ──────────────────────────────────────────────
 
   let _activeConflictData = null;
+  let _pickMode = null; // { task } — set when user clicks "Reschedule Manually"
+
+  function _enterPickMode(task) {
+    _pickMode = { task };
+    // Show a persistent banner so the user knows what to do
+    let banner = document.getElementById('pick-mode-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'pick-mode-banner';
+      banner.style.cssText = [
+        'position:fixed', 'top:0', 'left:0', 'right:0', 'z-index:9999',
+        'background:linear-gradient(90deg,#f59e0b,#ef4444)',
+        'color:#fff', 'text-align:center', 'padding:12px 16px',
+        'font-weight:600', 'font-size:14px', 'display:flex',
+        'align-items:center', 'justify-content:center', 'gap:12px'
+      ].join(';');
+      const label = document.createElement('span');
+      label.id = 'pick-mode-label';
+      const cancel = document.createElement('button');
+      cancel.textContent = '✕ Cancel';
+      cancel.style.cssText = 'background:rgba(255,255,255,0.2);border:none;color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:13px;';
+      cancel.onclick = _exitPickMode;
+      banner.appendChild(label);
+      banner.appendChild(cancel);
+      document.body.prepend(banner);
+    }
+    document.getElementById('pick-mode-label').textContent =
+      `📅 Click any empty slot to reschedule "${task.title}"`;
+    banner.style.display = 'flex';
+  }
+
+  function _exitPickMode() {
+    _pickMode = null;
+    const banner = document.getElementById('pick-mode-banner');
+    if (banner) banner.style.display = 'none';
+  }
 
   async function _openConflictModal(taskA, taskB) {
     // Show loading state
@@ -736,10 +821,10 @@ const Calendar = (() => {
     document.getElementById('conflict-accept-btn')?.addEventListener('click', _acceptConflictResolution);
 
     document.getElementById('conflict-manual-btn')?.addEventListener('click', () => {
-      if (_activeConflictData && typeof Chat !== 'undefined') {
+      if (_activeConflictData) {
         const m = _activeConflictData.move_task;
-        Chat.prefill(`Reschedule "${m.title}" to a better time`);
         _closeConflictModal();
+        _enterPickMode(m);  // enter click-to-pick mode instead of chat prefill
       }
     });
 

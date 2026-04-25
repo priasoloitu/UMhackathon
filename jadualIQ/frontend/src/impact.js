@@ -17,7 +17,18 @@ const Impact = (() => {
 
       if (hours)     hours.textContent     = data.hours_saved_this_week || 0;
       if (tasks)     tasks.textContent     = data.tasks_scheduled || 0;
-      if (conflicts) conflicts.textContent = data.conflicts_today || 0;
+      if (conflicts) {
+        conflicts.textContent = data.conflicts_today || 0;
+        // Make it red if there are active conflicts
+        const cardIcon = conflicts.parentElement.querySelector('.impact-card__icon');
+        if (data.conflicts_today > 0) {
+          conflicts.style.color = 'var(--red)';
+          if (cardIcon) cardIcon.style.color = 'var(--red)';
+        } else {
+          conflicts.style.color = ''; // reset to default
+          if (cardIcon) cardIcon.style.color = 'var(--amber)'; // default amber
+        }
+      }
       if (rm)        rm.textContent        = "RM " + (data.rm_saved_this_week || 0);
     } catch (_) {
       // silently ignore

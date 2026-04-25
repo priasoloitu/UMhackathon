@@ -131,7 +131,7 @@ def get_tasks(user_id: int) -> list:
     return [dict(r) for r in rows]
 
 
-def add_task(user_id: int, data: dict) -> dict:
+def add_task(user_id: int, data: dict, conflict_detected: bool = False) -> dict:
     conn = get_db()
     c = conn.execute(
         """INSERT INTO tasks (user_id, title, date, start_time, end_time, location, status, notes, personal_notes, savings_rm)
@@ -179,6 +179,12 @@ def add_task(user_id: int, data: dict) -> dict:
         conn.execute(
             "INSERT INTO impact_log (user_id, event_type, value) VALUES (?, 'money_saved_rm', ?)",
             (user_id, savings_rm)
+        )
+    # Log conflict avoided if this task overlapped with an existing one
+    if conflict_detected:
+        conn.execute(
+            "INSERT INTO impact_log (user_id, event_type, value) VALUES (?, 'conflict_avoided', 1)",
+            (user_id,)
         )
     conn.commit()
     row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
@@ -349,15 +355,36 @@ def get_impact(user_id: int) -> dict:
         (user_id,)
     ).fetchone()["total"]
 
-    # Conflicts this week (tasks with status='blocked', within last 7 days)
-    # Note: We omit 'warning' here because 'warning' is used for weather/traffic alerts, 
-    # and we don't want them artificially inflating the scheduling conflicts counter.
-    conflicts = conn.execute(
-        """SELECT COUNT(*) as cnt FROM tasks
-           WHERE user_id = ? AND status = 'blocked'
-           AND date >= date('now', '-7 days')""",
+    # Active conflicts — calculate real-time overlapping pairs for upcoming tasks
+    tasks = conn.execute(
+        "SELECT start_time, end_time, date FROM tasks WHERE user_id = ? AND date >= date('now', 'localtime')",
         (user_id,)
-    ).fetchone()["cnt"]
+    ).fetchall()
+    
+    conflict_count = 0
+    by_date = {}
+    for t in tasks:
+        by_date.setdefault(t["date"], []).append(t)
+        
+    for date_str, day_tasks in by_date.items():
+        for i in range(len(day_tasks)):
+            for j in range(i + 1, len(day_tasks)):
+                t1, t2 = day_tasks[i], day_tasks[j]
+                
+                def _to_mins(t_time):
+                    h, m = map(int, t_time.split(':'))
+                    return h * 60 + m
+                    
+                s1 = _to_mins(t1["start_time"])
+                e1 = _to_mins(t1["end_time"]) if t1["end_time"] else s1 + 60
+                
+                s2 = _to_mins(t2["start_time"])
+                e2 = _to_mins(t2["end_time"]) if t2["end_time"] else s2 + 60
+                
+                if s1 < e2 and e1 > s2:
+                    conflict_count += 1
+                    
+    conflicts = conflict_count
 
     # Money saved this week — sum from impact_log using date-only comparison
     money_saved = conn.execute(

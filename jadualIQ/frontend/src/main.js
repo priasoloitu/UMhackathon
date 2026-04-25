@@ -27,11 +27,13 @@
 
   // Logout
   document.getElementById('logout-btn')?.addEventListener('click', async () => {
+    Chat.clearHistory();  // wipe chat so the next user starts fresh
     await Auth.logout();
     window.location.href = '/login';
   });
 
   // ── Initialise modules ─────────────────────────────────────────────────────
+  Chat.setUser(user.id);  // scope chat history to this user's account
   Chat.init();
   Restrictions.init();
   await Calendar.init();

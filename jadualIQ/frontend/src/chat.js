@@ -10,12 +10,18 @@
  *  - Typing indicator
  */
 const Chat = (() => {
-  const STORAGE_KEY = 'jadualiq_chat_history_v1';
+  const BASE_KEY = 'jadualiq_chat_v1';
   const HISTORY_LIMIT = 20; // messages kept for GLM context
 
+  let _userId = 'guest'; // set via Chat.setUser(id) on login
   let conversationHistory = [];   // [{role, content}, ...]
   let uiMessages = [];   // rendered bubbles, saved to localStorage
   let pendingSuggestion = null; // the last GLM suggestion awaiting confirm
+
+  // Returns a per-user storage key so different accounts never share history
+  function _storageKey() {
+    return `${BASE_KEY}_${_userId}`;
+  }
 
   // ── Internal helpers ───────────────────────────────────────────────────────
 
@@ -47,13 +53,13 @@ const Chat = (() => {
 
   function _saveToStorage() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ uiMessages, conversationHistory }));
+      localStorage.setItem(_storageKey(), JSON.stringify({ uiMessages, conversationHistory }));
     } catch (_) { }
   }
 
   function _loadFromStorage() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(_storageKey());
       if (!raw) return null;
       return JSON.parse(raw);
     } catch (_) {
@@ -64,7 +70,7 @@ const Chat = (() => {
   function clearHistory() {
     uiMessages = [];
     conversationHistory = [];
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(_storageKey());
     const container = document.getElementById('chat-messages');
     if (container) container.innerHTML = '';
     _appendGreeting();
@@ -441,5 +447,9 @@ const Chat = (() => {
     });
   }
 
-  return { init, send, prefill, clearHistory, appendBotMessage };
+  function setUser(id) {
+    _userId = id || 'guest';
+  }
+
+  return { init, send, prefill, clearHistory, appendBotMessage, setUser };
 })();
