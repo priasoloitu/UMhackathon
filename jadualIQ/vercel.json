@@ -1,15 +1,9 @@
 {
-  "version": 2,
-  "builds": [
+  "outputDirectory": "frontend",
+  "rewrites": [
     {
-      "src": "backend/app.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "backend/app.py"
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
     }
   ]
 }
