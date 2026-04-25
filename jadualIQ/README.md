@@ -7,7 +7,7 @@
 ## 🚀 Features
 
 - **Conversational Scheduling** — Chat naturally to add events ("Schedule a meeting next Monday at 3pm")
-- **Multi-Agent AI Pipeline** — Intake, Clarification, Conflict, and Logistics agents powered by Z.AI (GLM-4-Flash)
+- **Multi-Agent AI Pipeline** — Intake, Clarification, Conflict, and Logistics agents powered by Z.AI (ilmu-glm-5.1)
 - **Weather & Traffic Context** — Integrates OpenWeatherMap and Google Maps to suggest optimal transport modes and estimate RM savings
 - **Smart Conflict Resolution** — Detects overlapping calendar events and uses AI to decide which task to keep and which to reschedule
 - **Lifestyle Restrictions** — Block entire days, time ranges, or add custom rules (e.g. "No meetings after 8pm")
@@ -72,7 +72,7 @@ jadualIQ/
 
 ### Prerequisites
 - Python 3.11+
-- A [Z.AI API Key](https://open.bigmodel.cn) (GLM-4-Flash)
+- A [Z.AI API Key](https://open.bigmodel.cn) (ilmu-glm-5.1)
 
 ### 1. Clone the repository
 ```bash
@@ -108,7 +108,7 @@ See [`backend/.env.example`](backend/.env.example) for the full list. The only *
 
 | Variable | Description |
 |----------|-------------|
-| `ZAI_API_KEY` | Your Z.AI API key for GLM-4-Flash |
+| `ZAI_API_KEY` | Your Z.AI API key for ilmu-glm-5.1 |
 
 Optional keys (system falls back to simulated data if missing):
 
